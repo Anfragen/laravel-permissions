@@ -1,0 +1,45 @@
+{
+    "name": "anfragen/laravel-permissions",
+    "description": "Package for managing user permissions and roles",
+    "keywords": [
+        "anfragen",
+        "laravel",
+        "roles",
+        "permissions",
+        "security"
+    ],
+    "homepage": "https://github.com/Anfragen/laravel-permissions",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "João Pedro Lopes",
+            "email": "joaopalopes24@gmail.com"
+        }
+    ],
+    "require": {
+        "php" : "^8.0|^8.1",
+        "laravel/framework": "^9.31"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^7.0",
+        "pestphp/pest": "^1.22",
+        "laravel/pint": "^1.2"
+    },
+    "autoload": {
+        "psr-4": {
+            "Anfragen\\Permission\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Anfragen\\Permission\\PermissionServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "pestphp/pest-plugin": true
+        }
+    }
+}
