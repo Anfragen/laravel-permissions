@@ -3,7 +3,8 @@
 namespace Anfragen\Permission;
 
 use Anfragen\Permission\Commands\{CreatePermission, CreateRole, ResetCache};
-use Anfragen\Permission\Models\Permission;
+use Anfragen\Permission\Models\{ModelPermission, ModelRole, Permission, PermissionRole, Role};
+use Anfragen\Permission\Observers\{ModelPermissionObserver, ModelRoleObserver, PermissionObserver, PermissionRoleObserver, RoleObserver};
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -27,9 +28,11 @@ class PermissionServiceProvider extends ServiceProvider
 
         $this->publishesFiles();
 
+        $this->configureGate();
+
         $this->registerCommands();
 
-        $this->configureGate();
+        $this->registerObservers();
     }
 
     /**
@@ -65,7 +68,7 @@ class PermissionServiceProvider extends ServiceProvider
     /**
      * Register the package's commands.
      */
-    public function registerCommands(): void
+    private function registerCommands(): void
     {
         if ($this->app->runningInConsole()) {
             $this->commands([
@@ -74,6 +77,22 @@ class PermissionServiceProvider extends ServiceProvider
                 ResetCache::class,
             ]);
         }
+    }
+
+    /**
+     * Register the package's observers.
+     */
+    private function registerObservers(): void
+    {
+        Role::observe(RoleObserver::class);
+
+        ModelRole::observe(ModelRoleObserver::class);
+
+        Permission::observe(PermissionObserver::class);
+
+        PermissionRole::observe(PermissionRoleObserver::class);
+
+        ModelPermission::observe(ModelPermissionObserver::class);
     }
 
     /**

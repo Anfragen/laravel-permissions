@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Observers;
+namespace Anfragen\Permission\Observers;
 
 use Anfragen\Permission\Facades\CacheKeys;
 use Anfragen\Permission\Models\PermissionRole;

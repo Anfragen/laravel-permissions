@@ -12,7 +12,9 @@ class PermissionBlockException extends Exception
         $message = trans('permissions::permission.block');
 
         if (config('permissions.permissions_in_exception')) {
-            $message .= trans('permissions::permission.block_permissions', ['permissions' => collect($permissions)->implode(', ')]);
+            $text = trans('permissions::permission.block_permissions', ['permissions' => collect($permissions)->implode(', ')]);
+
+            $message = "{$message} {$text}";
         }
 
         return new static($message, Response::HTTP_FORBIDDEN);

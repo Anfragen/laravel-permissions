@@ -12,7 +12,9 @@ class RoleBlockException extends Exception
         $message = trans('permissions::permission.block');
 
         if (config('permissions.roles_in_exception')) {
-            $message .= trans('permissions::permission.block_roles', ['roles' => collect($roles)->implode(', ')]);
+            $text = trans('permissions::permission.block_roles', ['roles' => collect($roles)->implode(', ')]);
+
+            $message = "{$message} {$text}";
         }
 
         return new static($message, Response::HTTP_FORBIDDEN);
