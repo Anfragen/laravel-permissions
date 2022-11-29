@@ -1,10 +1,10 @@
 <?php
 
-namespace Anfragen\Permission\Traits\Models;
+namespace Anfragen\Permission\Traits;
 
-use Anfragen\Permission\Models\{ModelRole, Permission, PermissionRole, Role};
+use Anfragen\Permission\Models\{ModelPermission, ModelRole, Permission, Role};
 use Illuminate\Database\Eloquent\Collection as EloquentCollection;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Collection;
 
 trait HasRoles
@@ -15,13 +15,19 @@ trait HasRoles
     |--------------------------------------------------------------------------
     */
 
-    public function roles(): BelongsToMany
+    /**
+     * Relationship with the Model Role Pivot.
+     */
+    public function roles(): MorphToMany
     {
-        return $this->belongsToMany(Role::class)
+        return $this->morphToMany(Role::class, 'model', 'model_role')
             ->using(ModelRole::class)
             ->withTimestamps();
     }
 
+    /**
+     * Get all roles of the model.
+     */
     public function getRoles(): EloquentCollection
     {
         $userRoles = ModelRole::getModelRoles($this);
@@ -31,6 +37,9 @@ trait HasRoles
         )->values();
     }
 
+    /**
+     * Check if the model has a specific role.
+     */
     public function hasRoleTo(int|string $role): bool
     {
         $role = Role::getRole($role);
@@ -40,6 +49,9 @@ trait HasRoles
         return $userRoles->where('role_id', $role?->id)->isNotEmpty();
     }
 
+    /**
+     * Check if the model has any of the given roles.
+     */
     public function hasAnyRole(Collection|array $roles): bool
     {
         return collect($roles)->map(
@@ -47,6 +59,9 @@ trait HasRoles
         )->contains(true);
     }
 
+    /**
+     * Check if the model has all of the given roles.
+     */
     public function hasAllRoles(Collection|array $roles): bool
     {
         return !collect($roles)->map(
@@ -54,6 +69,9 @@ trait HasRoles
         )->contains(false);
     }
 
+    /**
+     * Give the given role to the model.
+     */
     public function assignRoleTo(int|string $role): void
     {
         $role = Role::getRole($role);
@@ -61,6 +79,9 @@ trait HasRoles
         $this->roles()->syncWithoutDetaching([$role->id]);
     }
 
+    /**
+     * Revoke the given role to the model.
+     */
     public function revokeRoleTo(int|string $role): void
     {
         $role = Role::getRole($role);
@@ -68,6 +89,9 @@ trait HasRoles
         $this->roles()->detach($role->id);
     }
 
+    /**
+     * Sync the given roles to the model.
+     */
     public function syncRoles(Collection|array $roles): void
     {
         $roles = collect($roles)->map(
@@ -83,31 +107,43 @@ trait HasRoles
     |--------------------------------------------------------------------------
     */
 
-    public function permissions(): BelongsToMany
+    /**
+     * Relationship with the Model Permission Pivot.
+     */
+    public function permissions(): MorphToMany
     {
-        return $this->belongsToMany(Permission::class)
+        return $this->morphToMany(Permission::class, 'model', 'model_permission')
             ->using(ModelPermission::class)
             ->withTimestamps();
     }
 
+    /**
+     * Get all permissions of the model.
+     */
     public function getPermissions(): EloquentCollection
     {
-        $rolePermissions = PermissionRole::getRolePermissions($this);
+        $modelPermissions = ModelPermission::getModelPermissions($this);
 
-        return $rolePermissions->map(
-            fn ($rolePermission) => Permission::getPermission($rolePermission->permission_id)
+        return $modelPermissions->map(
+            fn ($modelPermission) => Permission::getPermission($modelPermission->permission_id)
         )->values();
     }
 
+    /**
+     * Check if the model has a specific permission.
+     */
     public function hasPermissionTo(int|string $permission): bool
     {
         $permission = Permission::getPermission($permission);
 
-        $rolePermissions = PermissionRole::getRolePermissions($this);
+        $modelPermissions = ModelPermission::getModelPermissions($this);
 
-        return $rolePermissions->where('permission_id', $permission?->id)->isNotEmpty();
+        return $modelPermissions->where('permission_id', $permission?->id)->isNotEmpty();
     }
 
+    /**
+     * Check if the model has any of the given permissions.
+     */
     public function hasAnyPermission(Collection|array $permissions): bool
     {
         return collect($permissions)->map(
@@ -115,6 +151,9 @@ trait HasRoles
         )->contains(true);
     }
 
+    /**
+     * Check if the model has all of the given permissions.
+     */
     public function hasAllPermissions(Collection|array $permissions): bool
     {
         return !collect($permissions)->map(
@@ -122,6 +161,9 @@ trait HasRoles
         )->contains(false);
     }
 
+    /**
+     * Give the given permission to the model.
+     */
     public function assignPermissionTo(int|string $permission): void
     {
         $permission = Permission::getPermission($permission);
@@ -129,6 +171,9 @@ trait HasRoles
         $this->permissions()->syncWithoutDetaching([$permission->id]);
     }
 
+    /**
+     * Revoke the given permission to the model.
+     */
     public function revokePermissionTo(int|string $permission): void
     {
         $permission = Permission::getPermission($permission);
@@ -136,6 +181,9 @@ trait HasRoles
         $this->permissions()->detach($permission->id);
     }
 
+    /**
+     * Sync the given permissions to the model.
+     */
     public function syncPermissions(Collection|array $permissions): void
     {
         $permissions = collect($permissions)->map(
@@ -151,7 +199,10 @@ trait HasRoles
     |--------------------------------------------------------------------------
     */
 
-    public function getRolePermissions(): EloquentCollection
+    /**
+     * Get all permissions of the model via roles.
+     */
+    public function getPermissionsByRole(): EloquentCollection
     {
         $permissions = new EloquentCollection();
 
@@ -164,7 +215,10 @@ trait HasRoles
         return $permissions->unique()->values();
     }
 
-    public function hasRolePermissionTo(int|string $permission): bool
+    /**
+     * Check if the model has a specific permission via roles.
+     */
+    public function hasPermissionByRoleTo(int|string $permission): bool
     {
         $roles = $this->getRoles();
 
@@ -173,7 +227,10 @@ trait HasRoles
         )->contains(true);
     }
 
-    public function hasRoleAnyPermission(Collection|array $permissions): bool
+    /**
+     * Check if the model has any of the given permissions via roles.
+     */
+    public function hasAnyPermissionByRole(Collection|array $permissions): bool
     {
         $roles = $this->getRoles();
 
@@ -182,7 +239,10 @@ trait HasRoles
         )->contains(true);
     }
 
-    public function hasRoleAllPermissions(Collection|array $permissions): bool
+    /**
+     * Check if the model has all of the given permissions via roles.
+     */
+    public function hasAllPermissionsByRole(Collection|array $permissions): bool
     {
         $roles = $this->getRoles();
 

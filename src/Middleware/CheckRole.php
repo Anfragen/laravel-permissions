@@ -9,6 +9,9 @@ use Illuminate\Support\Str;
 
 class CheckRole
 {
+    /**
+     * Handle an incoming request.
+     */
     public function handle(Request $request, Closure $next, string $roles): mixed
     {
         $roles = Str::of($roles)->explode('|')->toArray();
