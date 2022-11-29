@@ -2,21 +2,21 @@
 
 namespace Anfragen\Permission\Exceptions;
 
-use Exception;
 use Illuminate\Http\Response;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
-class PermissionBlockException extends Exception
+class PermissionBlockException extends HttpException
 {
     public static function handle(array $permissions): self
     {
-        $message = trans('permissions::permission.block');
+        $message = trans('anfragen::permissions.blocked');
 
         if (config('permissions.permissions_in_exception')) {
-            $text = trans('permissions::permission.block_permissions', ['permissions' => collect($permissions)->implode(', ')]);
+            $text = trans('anfragen::permissions.block_permissions', ['permissions' => collect($permissions)->implode(', ')]);
 
             $message = "{$message} {$text}";
         }
 
-        return new static($message, Response::HTTP_FORBIDDEN);
+        return new static(Response::HTTP_FORBIDDEN, $message);
     }
 }
