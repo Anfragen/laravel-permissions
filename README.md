@@ -2,12 +2,12 @@
 
 This package was created with the aim of supplying the permissions functionality of the Anfragen system.
 
-## Apêndice
+## Appendix
 
 If you want a complete and robust permissions package, use [Spatie Permission](https://github.com/spatie/laravel-permission). This package aims at something simple, using a hybrid bank, and without much complexity and customization.
 
 
-## Instalação
+## Installation
 
 Install the package using composer:
 
@@ -15,7 +15,7 @@ Install the package using composer:
   composer require ****
 ```
     
-## Autores
+## Authors
 
 - [@joaopalopes24](https://github.com/joaopalopes24)
 
