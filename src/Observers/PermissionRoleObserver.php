@@ -3,7 +3,6 @@
 namespace Anfragen\Permission\Observers;
 
 use Anfragen\Permission\Facades\CacheKeys;
-use Anfragen\Permission\Models\PermissionRole;
 use Illuminate\Support\Facades\Cache;
 
 class PermissionRoleObserver
@@ -11,7 +10,7 @@ class PermissionRoleObserver
     /**
      * Handle the PermissionRole "created" event.
      */
-    public function created(PermissionRole $permissionRole): void
+    public function created(): void
     {
         $this->clearCache();
     }
@@ -19,7 +18,7 @@ class PermissionRoleObserver
     /**
      * Handle the PermissionRole "updated" event.
      */
-    public function updated(PermissionRole $permissionRole): void
+    public function updated(): void
     {
         $this->clearCache();
     }
@@ -27,7 +26,7 @@ class PermissionRoleObserver
     /**
      * Handle the PermissionRole "deleted" event.
      */
-    public function deleted(PermissionRole $permissionRole): void
+    public function deleted(): void
     {
         $this->clearCache();
     }
@@ -37,6 +36,6 @@ class PermissionRoleObserver
      */
     private function clearCache(): void
     {
-        Cache::forget(CacheKeys::permissionsRoles());
+        Cache::forget(CacheKeys::permissionRoles());
     }
 }
