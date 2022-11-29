@@ -4,6 +4,7 @@ namespace Anfragen\Permission\Commands;
 
 use Anfragen\Permission\Models\Role;
 use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 
 class CreateRole extends Command
 {
@@ -25,6 +26,7 @@ class CreateRole extends Command
     {
         Role::query()->updateOrCreate([
             'name' => $this->argument('name'),
+            'slug' => Str::slug($this->argument('name')),
         ]);
 
         $this->info('Role created successfully.');
