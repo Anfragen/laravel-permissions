@@ -4,16 +4,14 @@ namespace Anfragen\Permission\Models;
 
 use Anfragen\Permission\Facades\CacheKeys;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\{BelongsTo, MorphTo, Pivot};
+use Illuminate\Database\Eloquent\{Collection, Model};
+use Illuminate\Database\Eloquent\Relations\{BelongsTo, MorphPivot, MorphTo};
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 
-class ModelRole extends Pivot
+class ModelRole extends MorphPivot
 {
     use HasUuids;
-    use HasFactory;
 
     public $incrementing = true;
 
@@ -41,10 +39,10 @@ class ModelRole extends Pivot
         return $this->belongsTo(Role::class);
     }
 
-        /**
-         * Get all the data and add it to the cache
-         */
-    public static function getAllFromCache()
+    /**
+     * Get all the data and add it to the cache
+     */
+    public static function getAllFromCache(): Collection
     {
         return Cache::remember(
             CacheKeys::modelRoles(),
@@ -56,8 +54,8 @@ class ModelRole extends Pivot
     /**
      * Return specific data from cache
      */
-    public static function getModelRoles(Model $model)
+    public static function getModelRoles(Model $model): mixed
     {
-        return self::getAllFromCache()->where('model_type', $model)->where('model_id', $model->id);
+        return self::getAllFromCache()->where('model_type', get_class($model))->where('model_id', $model->id);
     }
 }

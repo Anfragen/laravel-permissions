@@ -2,10 +2,11 @@
 
 namespace Anfragen\Permission\Models;
 
+use Anfragen\Permission\Factories\PermissionFactory;
 use Anfragen\Permission\Facades\CacheKeys;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\{Collection, Model};
+use Illuminate\Database\Eloquent\Factories\{Factory, HasFactory};
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
@@ -33,6 +34,14 @@ class Permission extends Model
     }
 
     /**
+     * Get the factory instance for the model.
+     */
+    protected static function newFactory(): Factory
+    {
+        return PermissionFactory::new();
+    }
+
+    /**
      * Relationship with the Role Model
      */
     public function roles(): BelongsToMany
@@ -42,10 +51,10 @@ class Permission extends Model
             ->withTimestamps();
     }
 
-        /**
-         * Get all the data and add it to the cache
-         */
-    public static function getAllFromCache()
+    /**
+     * Get all the data and add it to the cache
+     */
+    public static function getAllFromCache(): Collection
     {
         return Cache::remember(
             CacheKeys::permissions(),
@@ -57,10 +66,10 @@ class Permission extends Model
     /**
      * Return specific data from cache
      */
-    public static function getPermission(int|string $permission)
+    public static function getPermission(int|string $permission): mixed
     {
         return self::getAllFromCache()->filter(
-            fn ($value) => $value->id === $permission || $value->slug === $permission
+            fn ($value) => $value->id === $permission || $value->uuid === $permission || $value->slug === $permission
         )->first();
     }
 }
