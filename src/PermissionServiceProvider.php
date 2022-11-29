@@ -3,9 +3,11 @@
 namespace Anfragen\Permission;
 
 use Anfragen\Permission\Commands\{CreatePermission, CreateRole, ResetCache};
+use Anfragen\Permission\Middleware\{CheckPermission, CheckRole};
 use Anfragen\Permission\Models\{ModelPermission, ModelRole, Permission, PermissionRole, Role};
 use Anfragen\Permission\Observers\{ModelPermissionObserver, ModelRoleObserver, PermissionObserver, PermissionRoleObserver, RoleObserver};
 use Illuminate\Foundation\Auth\User;
+use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
@@ -24,7 +26,7 @@ class PermissionServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->loadTranslationsFrom(__DIR__ . '/../lang', 'permissions');
+        $this->loadTranslationsFrom(__DIR__ . '/../lang', 'anfragen');
 
         $this->publishesFiles();
 
@@ -33,6 +35,8 @@ class PermissionServiceProvider extends ServiceProvider
         $this->registerCommands();
 
         $this->registerObservers();
+
+        $this->registerMiddleware();
     }
 
     /**
@@ -59,8 +63,8 @@ class PermissionServiceProvider extends ServiceProvider
     private function configureGate(): void
     {
         Gate::before(function (User $user, $ability) {
-            if (method_exists($user, 'hasPermissionTo')) {
-                return Permission::getPermission($ability) ? $user->hasPermissionTo($ability) : true;
+            if (Permission::getPermission($ability)) {
+                return $user->hasPermissionTo($ability) || $user->hasPermissionByRoleTo($ability);
             }
         });
     }
@@ -93,6 +97,17 @@ class PermissionServiceProvider extends ServiceProvider
         PermissionRole::observe(PermissionRoleObserver::class);
 
         ModelPermission::observe(ModelPermissionObserver::class);
+    }
+
+    /**
+     * Register the package's middleware.
+     */
+    private function registerMiddleware(): void
+    {
+        $router = $this->app->make(Router::class);
+
+        $router->aliasMiddleware('roles', CheckRole::class);
+        $router->aliasMiddleware('permissions', CheckPermission::class);
     }
 
     /**
