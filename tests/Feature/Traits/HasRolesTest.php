@@ -1,6 +1,6 @@
 <?php
 
-use Anfragen\Permission\Models\{ModelRole, Permission, Role};
+use Anfragen\Permission\Models\{Permission, Role};
 use Anfragen\Permission\Tests\Models\User;
 use Illuminate\Support\Str;
 
@@ -209,19 +209,62 @@ test('validate if the user has all the roles assigned', function () {
 
 /*
 |--------------------------------------------------------------------------
-| Permission
+| Direct Permission
+|--------------------------------------------------------------------------
+*/
+
+test('test 1', function () {
+    $role = Role::getAllFromCache()->shuffle()->first();
+
+    $permissions = Permission::getAllFromCache()->random(3);
+
+    $modelPermissions = $this->model->getPermissions();
+
+    expect($modelPermissions)->toBeEmpty();
+
+    $this->model->assignRoleTo($role->id);
+    $this->model->syncPermissions($permissions->pluck('id'));
+
+    $modelPermissions = $this->model->getPermissions();
+
+    expect($modelPermissions->count())->not->toBeEmpty();
+
+    expect($this->model->hasPermissionTo($permissions->first()->id))->toBeTrue();
+    expect($this->model->hasPermissionTo($permissions->first()->uuid))->toBeTrue();
+    expect($this->model->hasPermissionTo($permissions->first()->slug))->toBeTrue();
+
+    expect($this->model->hasPermissionTo($role->getPermissions()->first()->id))->toBeTrue();
+    expect($this->model->hasPermissionTo($role->getPermissions()->first()->uuid))->toBeTrue();
+    expect($this->model->hasPermissionTo($role->getPermissions()->first()->slug))->toBeTrue();
+
+    expect($this->model->hasAnyPermission([$permissions->first()->id, Str::random(8)]))->toBeTrue();
+    expect($this->model->hasAnyPermission([$permissions->first()->uuid, Str::random(8)]))->toBeTrue();
+    expect($this->model->hasAnyPermission([$permissions->first()->slug, Str::random(8)]))->toBeTrue();
+
+    expect($this->model->hasAnyPermission([$role->getPermissions()->first()->id, Str::random(8)]))->toBeTrue();
+    expect($this->model->hasAnyPermission([$role->getPermissions()->first()->uuid, Str::random(8)]))->toBeTrue();
+    expect($this->model->hasAnyPermission([$role->getPermissions()->first()->slug, Str::random(8)]))->toBeTrue();
+
+    expect($this->model->hasAllPermissions([$permissions->first()->id, $role->getPermissions()->first()->id]))->toBeTrue();
+    expect($this->model->hasAllPermissions([$permissions->first()->uuid, $role->getPermissions()->first()->uuid]))->toBeTrue();
+    expect($this->model->hasAllPermissions([$permissions->first()->slug, $role->getPermissions()->first()->slug]))->toBeTrue();
+});
+
+/*
+|--------------------------------------------------------------------------
+| Direct Permission
 |--------------------------------------------------------------------------
 */
 
 test('return role permissions correctly and in this case empty', function () {
     $permission = Permission::getAllFromCache()->shuffle()->first();
 
-    $modelPermissions = $this->model->getPermissions();
+    $modelPermissions = $this->model->getDirectPermissions();
 
     expect($modelPermissions)->toBeEmpty();
-    expect($this->model->hasPermissionTo($permission->id))->toBeFalse();
-    expect($this->model->hasPermissionTo($permission->uuid))->toBeFalse();
-    expect($this->model->hasPermissionTo($permission->slug))->toBeFalse();
+    expect($this->model->hasDirectPermission($permission->id))->toBeFalse();
+    expect($this->model->hasDirectPermission($permission->uuid))->toBeFalse();
+    expect($this->model->hasDirectPermission($permission->slug))->toBeFalse();
 
     $this->assertDatabaseMissing('model_permission', [
         'model_type' => User::class,
@@ -231,7 +274,7 @@ test('return role permissions correctly and in this case empty', function () {
     $permissions = collect()->range(1, 30);
 
     $permissions->each(
-        fn () => expect($this->model->hasPermissionTo(Str::random(8)))->toBeFalse()
+        fn () => expect($this->model->hasDirectPermission(Str::random(8)))->toBeFalse()
     );
 });
 
@@ -242,12 +285,12 @@ test('add a permission for the role successfully', function () {
     $this->model->assignPermissionTo($permission->uuid);
     $this->model->assignPermissionTo($permission->slug);
 
-    $modelPermissions = $this->model->getPermissions();
+    $modelPermissions = $this->model->getDirectPermissions();
 
     expect($modelPermissions->count())->toBe(1);
-    expect($this->model->hasPermissionTo($permission->id))->toBeTrue();
-    expect($this->model->hasPermissionTo($permission->uuid))->toBeTrue();
-    expect($this->model->hasPermissionTo($permission->slug))->toBeTrue();
+    expect($this->model->hasDirectPermission($permission->id))->toBeTrue();
+    expect($this->model->hasDirectPermission($permission->uuid))->toBeTrue();
+    expect($this->model->hasDirectPermission($permission->slug))->toBeTrue();
 
     $this->assertDatabaseHas('model_permission', [
         'model_type'    => User::class,
@@ -263,9 +306,9 @@ test('remove role permissions as requested', function () {
     $this->model->assignPermissionTo($permission->uuid);
     $this->model->assignPermissionTo($permission->slug);
 
-    expect($this->model->hasPermissionTo($permission->id))->toBeTrue();
-    expect($this->model->hasPermissionTo($permission->uuid))->toBeTrue();
-    expect($this->model->hasPermissionTo($permission->slug))->toBeTrue();
+    expect($this->model->hasDirectPermission($permission->id))->toBeTrue();
+    expect($this->model->hasDirectPermission($permission->uuid))->toBeTrue();
+    expect($this->model->hasDirectPermission($permission->slug))->toBeTrue();
 
     $this->assertDatabaseHas('model_permission', [
         'model_type'    => User::class,
@@ -277,12 +320,12 @@ test('remove role permissions as requested', function () {
     $this->model->revokePermissionTo($permission->uuid);
     $this->model->revokePermissionTo($permission->slug);
 
-    $modelPermissions = $this->model->getPermissions();
+    $modelPermissions = $this->model->getDirectPermissions();
 
     expect($modelPermissions)->toBeEmpty();
-    expect($this->model->hasPermissionTo($permission->id))->toBeFalse();
-    expect($this->model->hasPermissionTo($permission->uuid))->toBeFalse();
-    expect($this->model->hasPermissionTo($permission->slug))->toBeFalse();
+    expect($this->model->hasDirectPermission($permission->id))->toBeFalse();
+    expect($this->model->hasDirectPermission($permission->uuid))->toBeFalse();
+    expect($this->model->hasDirectPermission($permission->slug))->toBeFalse();
 
     $this->assertDatabaseMissing('model_permission', [
         'model_type'    => User::class,
@@ -298,15 +341,15 @@ test('sync permissions for the role', function () {
     $this->model->syncPermissions($permissions->pluck('uuid')->toArray());
     $this->model->syncPermissions($permissions->pluck('slug')->toArray());
 
-    $modelPermissions = $this->model->getPermissions();
+    $modelPermissions = $this->model->getDirectPermissions();
 
     $this->assertEquals($modelPermissions->toArray(), $permissions->toArray());
     expect($modelPermissions->count())->toBe($permissions->count());
 
     $permissions->each(function (Permission $permission) {
-        expect($this->model->hasPermissionTo($permission->id))->toBeTrue();
-        expect($this->model->hasPermissionTo($permission->uuid))->toBeTrue();
-        expect($this->model->hasPermissionTo($permission->slug))->toBeTrue();
+        expect($this->model->hasDirectPermission($permission->id))->toBeTrue();
+        expect($this->model->hasDirectPermission($permission->uuid))->toBeTrue();
+        expect($this->model->hasDirectPermission($permission->slug))->toBeTrue();
 
         $this->assertDatabaseHas('model_permission', [
             'model_type'    => User::class,
@@ -332,17 +375,17 @@ test('validate if the role has at least one permission assigned', function () {
     $this->model->assignPermissionTo($permission->uuid);
     $this->model->assignPermissionTo($permission->slug);
 
-    expect($this->model->hasAnyPermission($permissions->pluck('id')->toArray()))->toBeTrue();
-    expect($this->model->hasAnyPermission($permissions->pluck('uuid')->toArray()))->toBeTrue();
-    expect($this->model->hasAnyPermission($permissions->pluck('slug')->toArray()))->toBeTrue();
+    expect($this->model->hasDirectAnyPermission($permissions->pluck('id')->toArray()))->toBeTrue();
+    expect($this->model->hasDirectAnyPermission($permissions->pluck('uuid')->toArray()))->toBeTrue();
+    expect($this->model->hasDirectAnyPermission($permissions->pluck('slug')->toArray()))->toBeTrue();
 
     $this->model->revokePermissionTo($permission->id);
     $this->model->revokePermissionTo($permission->uuid);
     $this->model->revokePermissionTo($permission->slug);
 
-    expect($this->model->hasAnyPermission($permissions->pluck('id')->toArray()))->toBeFalse();
-    expect($this->model->hasAnyPermission($permissions->pluck('uuid')->toArray()))->toBeFalse();
-    expect($this->model->hasAnyPermission($permissions->pluck('slug')->toArray()))->toBeFalse();
+    expect($this->model->hasDirectAnyPermission($permissions->pluck('id')->toArray()))->toBeFalse();
+    expect($this->model->hasDirectAnyPermission($permissions->pluck('uuid')->toArray()))->toBeFalse();
+    expect($this->model->hasDirectAnyPermission($permissions->pluck('slug')->toArray()))->toBeFalse();
 });
 
 test('validate if the role has all the permissions assigned', function () {
@@ -354,23 +397,23 @@ test('validate if the role has all the permissions assigned', function () {
     $this->model->syncPermissions($permissions->pluck('uuid')->toArray());
     $this->model->syncPermissions($permissions->pluck('slug')->toArray());
 
-    expect($this->model->hasAllPermissions($permissions->pluck('id')->toArray()))->toBeTrue();
-    expect($this->model->hasAllPermissions($permissions->pluck('uuid')->toArray()))->toBeTrue();
-    expect($this->model->hasAllPermissions($permissions->pluck('slug')->toArray()))->toBeTrue();
+    expect($this->model->hasDirectAllPermissions($permissions->pluck('id')->toArray()))->toBeTrue();
+    expect($this->model->hasDirectAllPermissions($permissions->pluck('uuid')->toArray()))->toBeTrue();
+    expect($this->model->hasDirectAllPermissions($permissions->pluck('slug')->toArray()))->toBeTrue();
 
     $this->model->syncPermissions([]);
 
-    expect($this->model->hasAllPermissions($permissions->pluck('id')->toArray()))->toBeFalse();
-    expect($this->model->hasAllPermissions($permissions->pluck('uuid')->toArray()))->toBeFalse();
-    expect($this->model->hasAllPermissions($permissions->pluck('slug')->toArray()))->toBeFalse();
+    expect($this->model->hasDirectAllPermissions($permissions->pluck('id')->toArray()))->toBeFalse();
+    expect($this->model->hasDirectAllPermissions($permissions->pluck('uuid')->toArray()))->toBeFalse();
+    expect($this->model->hasDirectAllPermissions($permissions->pluck('slug')->toArray()))->toBeFalse();
 
     $this->model->assignPermissionTo($permission->id);
     $this->model->assignPermissionTo($permission->uuid);
     $this->model->assignPermissionTo($permission->slug);
 
-    expect($this->model->hasAllPermissions($permissions->pluck('id')->toArray()))->toBeFalse();
-    expect($this->model->hasAllPermissions($permissions->pluck('uuid')->toArray()))->toBeFalse();
-    expect($this->model->hasAllPermissions($permissions->pluck('slug')->toArray()))->toBeFalse();
+    expect($this->model->hasDirectAllPermissions($permissions->pluck('id')->toArray()))->toBeFalse();
+    expect($this->model->hasDirectAllPermissions($permissions->pluck('uuid')->toArray()))->toBeFalse();
+    expect($this->model->hasDirectAllPermissions($permissions->pluck('slug')->toArray()))->toBeFalse();
 });
 
 /*
@@ -389,7 +432,7 @@ test('return all user permissions through roles', function () {
     $this->model->assignRoleTo($role->slug);
     $this->model->assignRoleTo($role->name);
 
-    $userPermissions = $this->model->getPermissionsByRole();
+    $userPermissions = $this->model->getPermissionsViaRole();
 
     $this->assertEquals($role->getPermissions(), $userPermissions);
     expect($userPermissions->count())->toBe($role->getPermissions()->count());
@@ -399,7 +442,7 @@ test('return all user permissions through roles', function () {
     $this->model->syncRoles($roles->pluck('slug')->toArray());
     $this->model->syncRoles($roles->pluck('name')->toArray());
 
-    $userPermissions = $this->model->getPermissionsByRole();
+    $userPermissions = $this->model->getPermissionsViaRole();
 
     expect($userPermissions->count() >= $role->count())->toBeTrue();
 });
@@ -409,18 +452,18 @@ test('check if the user has a permission from the roles', function () {
 
     $permissions = $role->getPermissions();
 
-    $permissions->each(fn ($permission) => expect($this->model->hasPermissionByRoleTo($permission->id))->toBeFalse());
-    $permissions->each(fn ($permission) => expect($this->model->hasPermissionByRoleTo($permission->uuid))->toBeFalse());
-    $permissions->each(fn ($permission) => expect($this->model->hasPermissionByRoleTo($permission->slug))->toBeFalse());
+    $permissions->each(fn ($permission) => expect($this->model->hasPermissionViaRole($permission->id))->toBeFalse());
+    $permissions->each(fn ($permission) => expect($this->model->hasPermissionViaRole($permission->uuid))->toBeFalse());
+    $permissions->each(fn ($permission) => expect($this->model->hasPermissionViaRole($permission->slug))->toBeFalse());
 
     $this->model->assignRoleTo($role->id);
     $this->model->assignRoleTo($role->uuid);
     $this->model->assignRoleTo($role->slug);
     $this->model->assignRoleTo($role->name);
 
-    $permissions->each(fn ($permission) => expect($this->model->hasPermissionByRoleTo($permission->id))->toBeTrue());
-    $permissions->each(fn ($permission) => expect($this->model->hasPermissionByRoleTo($permission->uuid))->toBeTrue());
-    $permissions->each(fn ($permission) => expect($this->model->hasPermissionByRoleTo($permission->slug))->toBeTrue());
+    $permissions->each(fn ($permission) => expect($this->model->hasPermissionViaRole($permission->id))->toBeTrue());
+    $permissions->each(fn ($permission) => expect($this->model->hasPermissionViaRole($permission->uuid))->toBeTrue());
+    $permissions->each(fn ($permission) => expect($this->model->hasPermissionViaRole($permission->slug))->toBeTrue());
 });
 
 test('check if the user has any of the permissions from the roles', function () {
@@ -428,18 +471,18 @@ test('check if the user has any of the permissions from the roles', function () 
 
     $permissions = $role->getPermissions();
 
-    $permissions->each(fn ($permission) => expect($this->model->hasAnyPermissionByRole([$permission->id, Str::random(8)]))->toBeFalse());
-    $permissions->each(fn ($permission) => expect($this->model->hasAnyPermissionByRole([$permission->uuid, Str::random(8)]))->toBeFalse());
-    $permissions->each(fn ($permission) => expect($this->model->hasAnyPermissionByRole([$permission->slug, Str::random(8)]))->toBeFalse());
+    $permissions->each(fn ($permission) => expect($this->model->hasAnyPermissionViaRole([$permission->id, Str::random(8)]))->toBeFalse());
+    $permissions->each(fn ($permission) => expect($this->model->hasAnyPermissionViaRole([$permission->uuid, Str::random(8)]))->toBeFalse());
+    $permissions->each(fn ($permission) => expect($this->model->hasAnyPermissionViaRole([$permission->slug, Str::random(8)]))->toBeFalse());
 
     $this->model->assignRoleTo($role->id);
     $this->model->assignRoleTo($role->uuid);
     $this->model->assignRoleTo($role->slug);
     $this->model->assignRoleTo($role->name);
 
-    $permissions->each(fn ($permission) => expect($this->model->hasAnyPermissionByRole([$permission->id, Str::random(8)]))->toBeTrue());
-    $permissions->each(fn ($permission) => expect($this->model->hasAnyPermissionByRole([$permission->uuid, Str::random(8)]))->toBeTrue());
-    $permissions->each(fn ($permission) => expect($this->model->hasAnyPermissionByRole([$permission->slug, Str::random(8)]))->toBeTrue());
+    $permissions->each(fn ($permission) => expect($this->model->hasAnyPermissionViaRole([$permission->id, Str::random(8)]))->toBeTrue());
+    $permissions->each(fn ($permission) => expect($this->model->hasAnyPermissionViaRole([$permission->uuid, Str::random(8)]))->toBeTrue());
+    $permissions->each(fn ($permission) => expect($this->model->hasAnyPermissionViaRole([$permission->slug, Str::random(8)]))->toBeTrue());
 });
 
 test('check if the user has all the permissions from the roles', function () {
@@ -448,20 +491,20 @@ test('check if the user has all the permissions from the roles', function () {
     $permissions  = $role->getPermissions();
     $permissions2 = $permissions->shuffle();
 
-    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsByRole([$permission->id, $permissions2->random()->id]))->toBeFalse());
-    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsByRole([$permission->uuid, $permissions2->random()->id]))->toBeFalse());
-    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsByRole([$permission->slug, $permissions2->random()->slug]))->toBeFalse());
+    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsViaRole([$permission->id, $permissions2->random()->id]))->toBeFalse());
+    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsViaRole([$permission->uuid, $permissions2->random()->id]))->toBeFalse());
+    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsViaRole([$permission->slug, $permissions2->random()->slug]))->toBeFalse());
 
     $this->model->assignRoleTo($role->id);
     $this->model->assignRoleTo($role->uuid);
     $this->model->assignRoleTo($role->slug);
     $this->model->assignRoleTo($role->name);
 
-    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsByRole([$permission->id, Str::random(8)]))->toBeFalse());
-    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsByRole([$permission->uuid, Str::random(8)]))->toBeFalse());
-    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsByRole([$permission->slug, Str::random(8)]))->toBeFalse());
+    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsViaRole([$permission->id, Str::random(8)]))->toBeFalse());
+    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsViaRole([$permission->uuid, Str::random(8)]))->toBeFalse());
+    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsViaRole([$permission->slug, Str::random(8)]))->toBeFalse());
 
-    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsByRole([$permission->id, $permissions2->random()->id]))->toBeTrue());
-    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsByRole([$permission->uuid, $permissions2->random()->id]))->toBeTrue());
-    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsByRole([$permission->slug, $permissions2->random()->slug]))->toBeTrue());
+    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsViaRole([$permission->id, $permissions2->random()->id]))->toBeTrue());
+    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsViaRole([$permission->uuid, $permissions2->random()->id]))->toBeTrue());
+    $permissions->each(fn ($permission) => expect($this->model->hasAllPermissionsViaRole([$permission->slug, $permissions2->random()->slug]))->toBeTrue());
 });

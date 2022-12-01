@@ -64,7 +64,7 @@ class PermissionServiceProvider extends ServiceProvider
     {
         Gate::before(function (User $user, $ability) {
             if (Permission::getPermission($ability)) {
-                return $user->hasPermissionTo($ability) || $user->hasPermissionByRoleTo($ability);
+                return $user->hasPermissionTo($ability);
             }
         });
     }

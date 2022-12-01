@@ -108,25 +108,15 @@ trait HasRoles
     */
 
     /**
-     * Relationship with the Model Permission Pivot.
-     */
-    public function permissions(): MorphToMany
-    {
-        return $this->morphToMany(Permission::class, 'model', 'model_permission')
-            ->using(ModelPermission::class)
-            ->withTimestamps();
-    }
-
-    /**
      * Get all permissions of the model.
      */
     public function getPermissions(): EloquentCollection
     {
-        $modelPermissions = ModelPermission::getModelPermissions($this);
+        $rolePermissions = $this->getPermissionsViaRole();
 
-        return $modelPermissions->map(
-            fn ($modelPermission) => Permission::getPermission($modelPermission->permission_id)
-        )->values();
+        $directPermissions = $this->getDirectPermissions();
+
+        return $rolePermissions->merge($directPermissions)->unique()->values();
     }
 
     /**
@@ -134,11 +124,11 @@ trait HasRoles
      */
     public function hasPermissionTo(int|string $permission): bool
     {
+        $allPermissions = $this->getPermissions();
+
         $permission = Permission::getPermission($permission);
 
-        $modelPermissions = ModelPermission::getModelPermissions($this);
-
-        return $modelPermissions->where('permission_id', $permission?->id)->isNotEmpty();
+        return $allPermissions->where('id', $permission?->id)->isNotEmpty();
     }
 
     /**
@@ -158,6 +148,66 @@ trait HasRoles
     {
         return !collect($permissions)->map(
             fn ($permission) => $this->hasPermissionTo($permission)
+        )->contains(false);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | Direct Permissions
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Relationship with the Model Permission Pivot.
+     */
+    public function permissions(): MorphToMany
+    {
+        return $this->morphToMany(Permission::class, 'model', 'model_permission')
+            ->using(ModelPermission::class)
+            ->withTimestamps();
+    }
+
+    /**
+     * Get all permissions direct of the model.
+     */
+    public function getDirectPermissions(): EloquentCollection
+    {
+        $modelPermissions = ModelPermission::getModelPermissions($this);
+
+        return $modelPermissions->map(
+            fn ($modelPermission) => Permission::getPermission($modelPermission->permission_id)
+        )->values();
+    }
+
+    /**
+     * Check if the model has a specific permission direct.
+     */
+    public function hasDirectPermission(int|string $permission): bool
+    {
+        $permission = Permission::getPermission($permission);
+
+        $modelPermissions = ModelPermission::getModelPermissions($this);
+
+        return $modelPermissions->where('permission_id', $permission?->id)->isNotEmpty();
+    }
+
+    /**
+     * Check if the model has any of the given permissions direct.
+     */
+    public function hasDirectAnyPermission(Collection|array $permissions): bool
+    {
+        return collect($permissions)->map(
+            fn ($permission) => $this->hasDirectPermission($permission)
+        )->contains(true);
+    }
+
+    /**
+     * Check if the model has all of the given permissions direct.
+     */
+    public function hasDirectAllPermissions(Collection|array $permissions): bool
+    {
+        return !collect($permissions)->map(
+            fn ($permission) => $this->hasDirectPermission($permission)
         )->contains(false);
     }
 
@@ -202,7 +252,7 @@ trait HasRoles
     /**
      * Get all permissions of the model via roles.
      */
-    public function getPermissionsByRole(): EloquentCollection
+    public function getPermissionsViaRole(): EloquentCollection
     {
         $permissions = new EloquentCollection();
 
@@ -218,7 +268,7 @@ trait HasRoles
     /**
      * Check if the model has a specific permission via roles.
      */
-    public function hasPermissionByRoleTo(int|string $permission): bool
+    public function hasPermissionViaRole(int|string $permission): bool
     {
         $roles = $this->getRoles();
 
@@ -230,7 +280,7 @@ trait HasRoles
     /**
      * Check if the model has any of the given permissions via roles.
      */
-    public function hasAnyPermissionByRole(Collection|array $permissions): bool
+    public function hasAnyPermissionViaRole(Collection|array $permissions): bool
     {
         $roles = $this->getRoles();
 
@@ -242,7 +292,7 @@ trait HasRoles
     /**
      * Check if the model has all of the given permissions via roles.
      */
-    public function hasAllPermissionsByRole(Collection|array $permissions): bool
+    public function hasAllPermissionsViaRole(Collection|array $permissions): bool
     {
         $roles = $this->getRoles();
 
