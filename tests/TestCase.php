@@ -64,7 +64,7 @@ abstract class TestCase extends Orchestra
     /**
      * Create Values using the Factories
      */
-    protected function runFactories()
+    protected function runFactories(): void
     {
         $users = User::factory()->count(3)->create();
 

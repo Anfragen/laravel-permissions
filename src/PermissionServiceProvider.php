@@ -44,16 +44,18 @@ class PermissionServiceProvider extends ServiceProvider
      */
     private function publishesFiles(): void
     {
+        $migration = 'create_permissions_table';
+
         $this->publishes([
             __DIR__ . '/../config/permissions.php' => config_path('permissions.php'),
         ], 'permissions-config');
 
         $this->publishes([
-            __DIR__ . '/../database/migrations/create_permissions_table.php' => $this->returnMigrationName(),
+            __DIR__ . "/../database/migrations/{$migration}.php" => $this->returnMigrationName($migration),
         ], 'permissions-migrations');
 
         $this->publishes([
-            __DIR__ . '/../lang' => lang_path(),
+            __DIR__ . '/../lang' => lang_path('vendor/anfragen'),
         ], 'permissions-lang');
     }
 
@@ -113,8 +115,10 @@ class PermissionServiceProvider extends ServiceProvider
     /**
      * Return the migration name.
      */
-    private function returnMigrationName(): string
+    private function returnMigrationName(string $migration): string
     {
-        return database_path('migrations/' . date('Y_m_d_His', time()) . '_create_permissions_table.php');
+        $date = date('Y_m_d_His', time());
+
+        return database_path("migrations/{$date}_{$migration}.php");
     }
 }
